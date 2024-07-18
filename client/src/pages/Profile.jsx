@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { app } from "../firebase";
-import { 
+import {
   getDownloadURL,
   getStorage,
   ref,
   uploadBytesResumable,
 } from "firebase/storage";
 import { useDispatch } from "react-redux";
-import { updateUserStart, updateUserSuccess, updateUserFailure } from "../redux/user/userSlice";
+import {
+  updateUserStart,
+  updateUserSuccess,
+  updateUserFailure,
+  deleteUserStart,
+  deleteUserFailure,
+  deleteUserSuccess,
+} from "../redux/user/userSlice";
 
 export default function Profile() {
   const dispatch = useDispatch();
@@ -47,22 +54,22 @@ export default function Profile() {
       }
     );
   };
-  const handleChange = (e) => { 
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
-  }
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       dispatch(updateUserStart());
       const res = await fetch(`/api/user/update/${currentUser._id}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if (data.success === false) { 
+      if (data.success === false) {
         dispatch(updateUserFailure(data));
         return;
       }
@@ -70,6 +77,23 @@ export default function Profile() {
       setUpdateSuccess(true);
     } catch (error) {
       dispatch(updateUserFailure(error));
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      dispatch(deleteUserStart());
+      const res = await fetch(`/api/user/delete/${currentUser._id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success == false) {
+        dispatch(deleteUserFailure(data));
+        return;
+      }
+      dispatch(deleteUserSuccess(data));
+    } catch (error) {
+      dispatch(deleteUserFailure(error));
     }
   };
   return (
@@ -89,14 +113,16 @@ export default function Profile() {
         request.resource.size < 2 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*') */}
         <img
-          src={ formData.profilePicture || currentUser.profilePicture}
+          src={formData.profilePicture || currentUser.profilePicture}
           alt="profile"
           className="h-24 w-24 self-center cursor-pointer rounded-full object-cover mt-2"
           onClick={() => fileRef.current.click()}
         />
         <p className="text-sm self-center">
           {imageError ? (
-            <span className="text-red-700">Error uploading image (file size must be less than 2 MB)</span>
+            <span className="text-red-700">
+              Error uploading image (file size must be less than 2 MB)
+            </span>
           ) : imagePercent > 0 && imagePercent < 100 ? (
             <span className="text-slate-700">{`Uploading: ${imagePercent} %`}</span>
           ) : imagePercent === 100 ? (
@@ -130,15 +156,22 @@ export default function Profile() {
           onChange={handleChange}
         />
         <button className="bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80">
-          { loading ? 'Loading...' : 'Update' }
+          {loading ? "Loading..." : "Update"}
         </button>
       </form>
       <div className="flex justify-between mt-5">
-        <span className="text-red-700 cursor-pointer">Delete Account</span>
+        <span
+          onClick={handleDeleteAccount}
+          className="text-red-700 cursor-pointer"
+        >
+          Delete Account
+        </span>
         <span className="text-red-700 cursor-pointer">Sign out</span>
       </div>
-      <p className="text-red-700 mt-5">{error && 'Something went wrong!'}</p>
-      <p className="text-green-700 mt-5"m>{ updateSuccess && 'User is updated successfully!'}</p>
+      <p className="text-red-700 mt-5">{error && "Something went wrong!"}</p>
+      <p className="text-green-700 mt-5">
+        {updateSuccess && "User is updated successfully!"}
+      </p>
     </div>
   );
 }
